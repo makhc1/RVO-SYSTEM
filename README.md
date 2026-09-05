@@ -169,9 +169,6 @@ export default {
   // Kunci lisensi resmi yang terdaftar pada sistem validasi
   licenseKey: process.env.LICENSE_KEY || "",
 
-  // URL server validasi lisensi
-  licenseServerUrl: process.env.LICENSE_SERVER_URL || "http://localhost:4000",
-
   // Nomor telepon akun untuk inisialisasi pairing code (kosongkan untuk input interaktif)
   pairingNumber: process.env.PAIRING_NUMBER || "",
 

@@ -9,9 +9,6 @@ export default {
   // Masukkan Kunci Lisensi resmi yang dibeli dari Owner (Contoh: "RVO-ABCD-1234-WXYZ")
   licenseKey: process.env.LICENSE_KEY || "",
 
-  // URL Server Validasi Lisensi Resmi Owner
-  licenseServerUrl: process.env.LICENSE_SERVER_URL || "http://localhost:4000",
-
   // Masukkan nomor HP akun WhatsApp kamu untuk Pairing Code (Contoh: "628123456789")
   // Jika dikosongkan (""), bot akan menanyakan nomor di terminal atau menampilkan QR Code.
   pairingNumber: process.env.PAIRING_NUMBER || "",
