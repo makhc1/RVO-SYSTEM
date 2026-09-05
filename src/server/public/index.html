@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[ RVO // TACTICAL TELEMETRY TERMINAL ]</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"Fira Code"', '"Space Mono"', 'monospace']
+          },
+          colors: {
+            crt: {
+              black: '#080808',
+              surface: '#0e0e0e',
+              panel: '#141414',
+              border: '#242424',
+              borderBright: '#3a3a3a',
+              text: '#EAEAEA',
+              muted: '#707070',
+              red: '#FF2A2A',
+              redDim: 'rgba(255, 42, 42, 0.15)',
+              green: '#4AF626',
+              greenDim: 'rgba(74, 246, 38, 0.12)'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      border-radius: 0px !important; /* STRICT INDUSTRIAL BRUTALISM: ZERO BORDER RADIUS */
+    }
+    
+    /* CRT Scanline simulation overlay */
+    body::before {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.6;
+    }
+
+    /* Technical grid background */
+    .blueprint-bg {
+      background-color: #080808;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* Industrial Hazard Striping */
+    .hazard-stripe {
+      background: repeating-linear-gradient(
+        -45deg,
+        #1c1c1c,
+        #1c1c1c 8px,
+        #0e0e0e 8px,
+        #0e0e0e 16px
+      );
+    }
+
+    /* Terminal Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #080808;
+      border-left: 1px solid #1a1a1a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #333333;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #FF2A2A;
+    }
+  </style>
+</head>
+<body class="blueprint-bg text-crt-text font-mono min-h-screen flex flex-col antialiased selection:bg-crt-red selection:text-black text-xs leading-relaxed">
+
+  <!-- TOP INDUSTRIAL MASTHEAD -->
+  <header class="border-b-2 border-crt-border bg-crt-surface sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      
+      <!-- System Identity Framing -->
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 bg-crt-red text-black font-black flex items-center justify-center text-sm select-none">
+          RVO
+        </div>
+        <div class="border-l border-crt-border pl-3 flex flex-col justify-center">
+          <div class="flex items-center space-x-2">
+            <span class="font-bold tracking-wider text-white text-xs">DECRYPTOR_TERMINAL</span>
+            <span class="text-[10px] text-crt-muted font-bold tracking-widest">[ REV // 4.8.2 ]</span>
+          </div>
+          <div class="text-[10px] text-crt-muted uppercase tracking-widest">SIGNAL_PROTOCOL // MD_FANOUT</div>
+        </div>
+      </div>
+
+      <!-- Telemetry Hardware Status, Cloudflare Tunnel & Reset Trigger -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- TryCloudflare Public URL Pill -->
+        <div id="tunnelPill" class="hidden md:flex items-center space-x-2 px-2.5 py-1 border border-cyan-500/50 bg-cyan-950/20 text-[11px] font-mono">
+          <span class="w-1.5 h-1.5 bg-cyan-400 inline-block animate-pulse"></span>
+          <span class="text-cyan-400 font-bold tracking-wider">TUNNEL:</span>
+          <a id="tunnelLink" href="#" target="_blank" class="text-white hover:text-cyan-300 underline underline-offset-2 truncate max-w-[200px] lg:max-w-[280px]">GENERATING...</a>
+          <button onclick="copyTunnelUrl(event)" title="Copy Public URL" class="px-1.5 py-0.5 border border-cyan-500/50 hover:bg-cyan-400 hover:text-black text-[9px] font-bold text-cyan-300 uppercase transition-colors">
+            [ COPY ]
+          </button>
+        </div>
+
+        <div id="connectionPill" class="flex items-center space-x-2 px-2.5 py-1 border border-crt-border bg-crt-black text-[11px]">
+          <span id="statusIndicator" class="w-2 h-2 bg-amber-400 inline-block animate-pulse"></span>
+          <span id="statusText" class="text-crt-muted font-bold tracking-widest uppercase">DISCONNECTED</span>
+        </div>
+
+        <button onclick="confirmRestart()" class="px-3 py-1 bg-crt-surface hover:bg-crt-red hover:text-black border border-crt-red text-crt-red text-[11px] font-bold tracking-wider uppercase transition-colors">
+          [ RESTART_SYS ]
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- TELEMETRY RECTILINEAR HUD CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4">
+
+    <!-- METRIC COMPARTMENTS (1px Grid Line Partitioning) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-crt-border border-2 border-crt-border">
+      
+      <!-- Cell 01: Host Identity -->
+      <div class="bg-crt-surface p-3.5 space-y-1 relative">
+        <div class="flex justify-between text-[10px] text-crt-muted uppercase tracking-widest">
+          <span>01 // HOST_IDENT</span>
+          <span class="text-crt-muted">[ WA_NET ]</span>
+        </div>
+        <div class="text-base font-bold text-white tracking-tight pt-1 truncate">
+          <span id="userNumber">--</span>
+        </div>
+        <div class="text-[10px] text-crt-muted font-mono truncate">
+          LID: <span id="userLid" class="text-crt-text">--</span>
+        </div>
+      </div>
+
+      <!-- Cell 02: Uptime Register -->
+      <div class="bg-crt-surface p-3.5 space-y-1 relative">
+        <div class="flex justify-between text-[10px] text-crt-muted uppercase tracking-widest">
+          <span>02 // UPTIME_CYCLES</span>
+          <span class="text-crt-muted">[ ACTIVE ]</span>
+        </div>
+        <div class="text-base font-bold text-crt-green tracking-tight pt-1">
+          <span id="uptime">0d</span>
+        </div>
+        <div class="text-[10px] text-crt-muted truncate">
+          SYNC: <span id="connectedAt" class="text-crt-text">--</span>
+        </div>
+      </div>
+
+      <!-- Cell 03: Intercept Payload Counter -->
+      <div class="bg-crt-surface p-3.5 space-y-1 relative">
+        <div class="flex justify-between text-[10px] text-crt-muted uppercase tracking-widest">
+          <span>03 // INTERCEPT_LOG</span>
+          <span class="text-crt-muted">[ TOTAL ]</span>
+        </div>
+        <div class="text-base font-bold text-white tracking-tight pt-1 flex items-baseline space-x-1.5">
+          <span id="rvoCount" class="text-crt-red font-black text-xl">0</span>
+          <span class="text-[10px] text-crt-muted uppercase tracking-widest">PAYLOADS</span>
+        </div>
+        <div class="text-[10px] text-crt-muted">
+          CIPHERTEXT_DECRYPTED
+        </div>
+      </div>
+
+      <!-- Cell 04: Stealth Protocol Vector -->
+      <div class="bg-crt-surface p-3.5 space-y-1 relative">
+        <div class="flex justify-between text-[10px] text-crt-muted uppercase tracking-widest">
+          <span>04 // SECURITY_STATE</span>
+          <span class="text-crt-muted">[ VECTOR ]</span>
+        </div>
+        <div class="pt-1">
+          <span id="stealthBadge" class="inline-block px-1.5 py-0.5 text-[10px] font-bold border border-crt-green text-crt-green bg-crt-greenDim uppercase">
+            [ STEALTH: ENABLED ]
+          </span>
+        </div>
+        <div id="stealthDesc" class="text-[10px] text-crt-muted truncate pt-0.5">
+          TARGET: CHAT_SELF_EXCLUSIVE
+        </div>
+      </div>
+
+    </div>
+
+    <!-- INTERCEPTED VIEW-ONCE PAYLOAD REGISTRY (ONE-CLICK STEALTH UNLOCK) -->
+    <div class="bg-crt-surface border-2 border-crt-border p-3.5 sm:p-4 space-y-3">
+      <div class="flex items-center justify-between border-b border-crt-border pb-2">
+        <div class="flex items-center space-x-2">
+          <span class="text-crt-red font-bold">///</span>
+          <span class="font-bold text-xs uppercase tracking-widest text-white">CAPTURED_PAYLOAD_REGISTRY</span>
+          <span id="voPayloadCount" class="px-1.5 py-0.2 text-[9px] bg-crt-red text-black font-black uppercase">0 TARGETS</span>
+          <span class="text-[10px] text-crt-muted hidden sm:inline">[ STEALTH ONE-CLICK UNLOCK HUB ]</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="syncVoList()" class="text-[10px] text-crt-muted hover:text-white px-2.5 py-0.5 border border-crt-border uppercase tracking-wider transition hover:border-white">
+            [ SYNC_LIST ]
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamic List of Captured Messages -->
+      <div id="voListContainer" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+        <div class="p-3 bg-crt-black border border-crt-border/50 text-crt-muted text-[11px] italic flex items-center justify-between">
+          <span>[ STANDBY ] Belum ada pesan View-Once yang terdeteksi. Menunggu packet stream...</span>
+          <span class="w-2 h-2 bg-crt-green inline-block animate-pulse"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TACTICAL DUAL-COLUMN CONSOLE -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+      <!-- LEFT: ACTUATORS & CONFIG MATRIX (5 COLS) -->
+      <div class="lg:col-span-5 space-y-4">
+
+        <!-- MECHANICAL CONFIG MATRIX -->
+        <div class="bg-crt-surface border-2 border-crt-border p-4 space-y-3">
+          
+          <div class="flex items-center justify-between border-b border-crt-border pb-2">
+            <span class="font-bold text-[11px] uppercase tracking-widest text-white flex items-center space-x-1.5">
+              <span class="text-crt-red">///</span>
+              <span>ACTUATOR_REGISTERS</span>
+            </span>
+            <span class="text-[9px] text-crt-muted tracking-widest uppercase">[ RAM_PERSIST ]</span>
+          </div>
+
+          <!-- Register 1: Auto RVO -->
+          <div class="flex items-center justify-between p-2.5 bg-crt-panel border border-crt-border">
+            <div class="pr-2">
+              <div class="font-bold text-white text-[11px] uppercase tracking-wider">REG_01: AUTO_RVO</div>
+              <div class="text-[10px] text-crt-muted">Background packet sniffing for view_once</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="toggle_autoRvo" onchange="updateConfig('autoRvo', this.checked)" class="sr-only peer">
+              <div class="w-12 h-6 bg-crt-black border border-crt-border peer peer-checked:bg-crt-red peer-checked:border-crt-red transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-crt-text after:h-4 after:w-5 after:transition-all peer-checked:after:translate-x-6 peer-checked:after:bg-black"></div>
+            </label>
+          </div>
+
+          <!-- Register 2: Send to Self -->
+          <div class="flex items-center justify-between p-2.5 bg-crt-panel border border-crt-border">
+            <div class="pr-2">
+              <div class="font-bold text-white text-[11px] uppercase tracking-wider">REG_02: SEND_TO_SELF</div>
+              <div class="text-[10px] text-crt-muted">Forward decrypted media to Chat With Yourself</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="toggle_sendToSelf" onchange="updateConfig('sendToSelf', this.checked)" class="sr-only peer">
+              <div class="w-12 h-6 bg-crt-black border border-crt-border peer peer-checked:bg-crt-red peer-checked:border-crt-red transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-crt-text after:h-4 after:w-5 after:transition-all peer-checked:after:translate-x-6 peer-checked:after:bg-black"></div>
+            </label>
+          </div>
+
+          <!-- Register 3: Delete Trigger -->
+          <div class="flex items-center justify-between p-2.5 bg-crt-panel border border-crt-border">
+            <div class="pr-2">
+              <div class="font-bold text-white text-[11px] uppercase tracking-wider">REG_03: PURGE_TRIGGER</div>
+              <div class="text-[10px] text-crt-muted">Auto-delete trigger message (e.g. ".") to cover trace</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="toggle_deleteTriggerMessage" onchange="updateConfig('deleteTriggerMessage', this.checked)" class="sr-only peer">
+              <div class="w-12 h-6 bg-crt-black border border-crt-border peer peer-checked:bg-crt-red peer-checked:border-crt-red transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-crt-text after:h-4 after:w-5 after:transition-all peer-checked:after:translate-x-6 peer-checked:after:bg-black"></div>
+            </label>
+          </div>
+
+          <!-- Register 4: Roomchat Reveal -->
+          <div class="flex items-center justify-between p-2.5 bg-crt-panel border border-crt-border">
+            <div class="pr-2">
+              <div class="font-bold text-white text-[11px] uppercase tracking-wider">REG_04: ROOM_REVEAL</div>
+              <div class="text-[10px] text-crt-muted">Expose unlocked media in source chat (OFF = Stealth)</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="toggle_autoRevealInCurrentChat" onchange="updateConfig('autoRevealInCurrentChat', this.checked)" class="sr-only peer">
+              <div class="w-12 h-6 bg-crt-black border border-crt-border peer peer-checked:bg-crt-red peer-checked:border-crt-red transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-crt-text after:h-4 after:w-5 after:transition-all peer-checked:after:translate-x-6 peer-checked:after:bg-black"></div>
+            </label>
+          </div>
+
+          <!-- Register 5: Local Storage -->
+          <div class="flex items-center justify-between p-2.5 bg-crt-panel border border-crt-border">
+            <div class="pr-2">
+              <div class="font-bold text-white text-[11px] uppercase tracking-wider">REG_05: DISK_ARCHIVE</div>
+              <div class="text-[10px] text-crt-muted">Write raw binary payload to <code class="text-white">./saved_media</code></div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="toggle_saveToLocalFolder" onchange="updateConfig('saveToLocalFolder', this.checked)" class="sr-only peer">
+              <div class="w-12 h-6 bg-crt-black border border-crt-border peer peer-checked:bg-crt-red peer-checked:border-crt-red transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-crt-text after:h-4 after:w-5 after:transition-all peer-checked:after:translate-x-6 peer-checked:after:bg-black"></div>
+            </label>
+          </div>
+
+          <!-- Register 6: Cloudflare Quick Tunnel -->
+          <div class="flex items-center justify-between p-2.5 bg-crt-panel border border-crt-border">
+            <div class="pr-2">
+              <div class="font-bold text-white text-[11px] uppercase tracking-wider flex items-center space-x-1.5">
+                <span>REG_06: AUTO_TUNNEL</span>
+                <span class="px-1 py-0.2 text-[8px] border border-cyan-500 text-cyan-400 bg-cyan-950/30">TRYCLOUDFLARE</span>
+              </div>
+              <div class="text-[10px] text-crt-muted">Create public HTTPS URL without port-forwarding</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="toggle_autoTunnel" onchange="updateConfig('autoTunnel', this.checked)" class="sr-only peer">
+              <div class="w-12 h-6 bg-crt-black border border-crt-border peer peer-checked:bg-cyan-500 peer-checked:border-cyan-500 transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-crt-text after:h-4 after:w-5 after:transition-all peer-checked:after:translate-x-6 peer-checked:after:bg-black"></div>
+            </label>
+          </div>
+
+          <!-- Register 7: WhatsApp Link Dispatch -->
+          <div class="flex items-center justify-between p-2.5 bg-crt-panel border border-crt-border">
+            <div class="pr-2">
+              <div class="font-bold text-white text-[11px] uppercase tracking-wider flex items-center space-x-1.5">
+                <span>REG_07: WA_LINK_DISPATCH</span>
+                <span class="px-1 py-0.2 text-[8px] border border-crt-green text-crt-green bg-crt-greenDim">SELF_CHAT</span>
+              </div>
+              <div class="text-[10px] text-crt-muted">Send Cloudflare link to personal chat on start</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="toggle_sendTunnelUrlToChat" onchange="updateConfig('sendTunnelUrlToChat', this.checked)" class="sr-only peer">
+              <div class="w-12 h-6 bg-crt-black border border-crt-border peer peer-checked:bg-crt-green peer-checked:border-crt-green transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-crt-text after:h-4 after:w-5 after:transition-all peer-checked:after:translate-x-6 peer-checked:after:bg-black"></div>
+            </label>
+          </div>
+
+          <!-- Register 8: Emoji Reaction Trigger -->
+          <div class="flex items-center justify-between p-2.5 bg-crt-panel border border-crt-border">
+            <div class="pr-2">
+              <div class="font-bold text-white text-[11px] uppercase tracking-wider flex items-center space-x-1.5">
+                <span>REG_08: EMOJI_TRIGGER</span>
+                <span class="px-1 py-0.2 text-[8px] border border-amber-400 text-amber-400 bg-amber-950/30">ANY_EMOJI</span>
+              </div>
+              <div class="text-[10px] text-crt-muted">React emoji apa saja di WA untuk buka media (Super Stealth)</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="toggle_enableReactionTrigger" onchange="updateConfig('enableReactionTrigger', this.checked)" class="sr-only peer">
+              <div class="w-12 h-6 bg-crt-black border border-crt-border peer peer-checked:bg-amber-400 peer-checked:border-amber-400 transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-crt-text after:h-4 after:w-5 after:transition-all peer-checked:after:translate-x-6 peer-checked:after:bg-black"></div>
+            </label>
+          </div>
+
+          <!-- Register 9: Auto-Purge Emoji Reaction -->
+          <div class="flex items-center justify-between p-2.5 bg-crt-panel border border-crt-border">
+            <div class="pr-2">
+              <div class="font-bold text-white text-[11px] uppercase tracking-wider flex items-center space-x-1.5">
+                <span>REG_09: PURGE_REACTION</span>
+                <span class="px-1 py-0.2 text-[8px] border border-crt-red text-crt-red bg-crt-redDim">ANTI_TRACE</span>
+              </div>
+              <div class="text-[10px] text-crt-muted">Hapus otomatis emoji reaction setelah media terkirim</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input type="checkbox" id="toggle_autoRemoveReaction" onchange="updateConfig('autoRemoveReaction', this.checked)" class="sr-only peer">
+              <div class="w-12 h-6 bg-crt-black border border-crt-border peer peer-checked:bg-crt-red peer-checked:border-crt-red transition-colors relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-crt-text after:h-4 after:w-5 after:transition-all peer-checked:after:translate-x-6 peer-checked:after:bg-black"></div>
+            </label>
+          </div>
+
+          <!-- Target Router Destination -->
+          <div class="pt-3 border-t border-crt-border space-y-1.5">
+            <div class="text-[10px] uppercase tracking-widest text-crt-muted flex justify-between">
+              <span>FORWARD_JID_DESTINATION:</span>
+              <span class="text-crt-red">[ ADDR_ROUTING ]</span>
+            </div>
+            <div class="flex space-x-1">
+              <div class="relative flex-1">
+                <input type="text" id="input_forwardNumber" placeholder="6289501524223" class="w-full px-3 py-2 bg-crt-black border border-crt-border text-xs text-white placeholder-crt-muted font-mono tracking-wider focus:outline-none focus:border-crt-red">
+              </div>
+              <button onclick="saveForwardNumber()" class="px-4 py-2 bg-crt-border hover:bg-crt-red hover:text-black text-white text-[11px] font-bold tracking-widest uppercase transition-colors">
+                [ COMMIT ]
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- OPERATIONAL BLUEPRINT DIRECTIVE -->
+        <div class="border border-crt-border bg-crt-surface p-3 space-y-2">
+          <div class="hazard-stripe h-2 border-b border-crt-border"></div>
+          <div class="flex items-center space-x-1.5 text-crt-red font-bold text-[10px] tracking-widest uppercase">
+            <span>[ PROTOCOL // BYPASS_GUIDELINES ]</span>
+          </div>
+          <div class="text-[11px] text-crt-muted leading-relaxed space-y-1.5">
+            <div>
+              <span class="text-amber-400 font-bold">[ 1. REACT EMOJI ]:</span> Tahan foto 1x lihat di WhatsApp, react emoji <span class="text-white font-bold">APAPUN</span> (👍, ❤️, 😂, 🗿). Media langsung dikirim ke chat pribadi & reaction otomatis dihapus.
+            </div>
+            <div>
+              <span class="text-cyan-400 font-bold">[ 2. WEB DASHBOARD ]:</span> Buka web ini dari HP, klik tombol <span class="text-white font-bold">[ 🔓 UNLOCK MEDIA ]</span> pada card di atas (0% jejak di WA).
+            </div>
+            <div>
+              <span class="text-crt-red font-bold">[ 3. SWIPE REPLY ]:</span> Balas pesan 1x lihat lalu ketik <code class="text-crt-red font-bold">.</code> (titik).
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: TELEMETRY BUFFER STREAM (7 COLS) -->
+      <div class="lg:col-span-7 flex flex-col">
+        <div class="bg-crt-surface border-2 border-crt-border flex-1 flex flex-col overflow-hidden min-h-[560px]">
+          
+          <!-- Terminal Upper Telemetry Bar -->
+          <div class="px-3.5 py-2 border-b border-crt-border bg-crt-black flex items-center justify-between text-[11px]">
+            <div class="flex items-center space-x-2">
+              <span class="text-crt-red font-bold">///</span>
+              <span class="font-bold tracking-widest uppercase text-white">STDOUT_BUFFER // ASYNC_FIFO</span>
+            </div>
+
+            <div class="flex items-center space-x-3">
+              <label class="flex items-center space-x-1 cursor-pointer text-crt-muted hover:text-white transition select-none text-[10px] uppercase tracking-wider">
+                <input type="checkbox" id="autoScrollCheck" checked class="w-3.5 h-3.5 bg-crt-black border border-crt-border checked:bg-crt-red accent-crt-red">
+                <span>[ AUTOSCROLL ]</span>
+              </label>
+              <button onclick="clearConsole()" class="text-crt-muted hover:text-crt-red transition text-[10px] px-2 py-0.5 border border-crt-border uppercase tracking-widest">
+                [ FLUSH ]
+              </button>
+            </div>
+          </div>
+
+          <!-- Raw Buffer Output Terminal -->
+          <div id="terminalStream" class="flex-1 p-3.5 text-[11px] overflow-y-auto space-y-1 bg-crt-black max-h-[580px]">
+            <div class="text-crt-muted">[ SYSTEM_INITIALIZING ] Awaiting telemetry packet socket...</div>
+          </div>
+
+          <!-- Terminal Lower Telemetry Status -->
+          <div class="px-3.5 py-1.5 border-t border-crt-border bg-crt-black flex items-center justify-between text-[10px] text-crt-muted">
+            <div class="flex items-center space-x-2">
+              <span class="w-1.5 h-1.5 bg-crt-green inline-block"></span>
+              <span>FILTER: VIEW_ONCE_ONLY (NORMAL_MSG_SUPPRESSED)</span>
+            </div>
+            <span id="logCount">0 EVENTS_REGISTERED</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- NOTIFICATION HUD OVERLAY -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-1 pointer-events-none"></div>
+
+  <!-- REBOOT CONFIRMATION MODAL -->
+  <div id="restartModal" class="fixed inset-0 bg-black/90 backdrop-blur-none z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-crt-surface border-2 border-crt-red max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="hazard-stripe h-2 border border-crt-red"></div>
+      <div class="space-y-1">
+        <div class="text-crt-red font-bold text-xs uppercase tracking-widest">[ SYSTEM_WARNING: REBOOT_TRIGGER ]</div>
+        <div class="text-[11px] text-crt-muted leading-relaxed">
+          Interrupting active Signal protocol socket. Baileys engine will disconnect and cycle reconnection in 3000ms. Proceed with socket reload?
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-1">
+        <button onclick="closeRestartModal()" class="flex-1 py-1.5 border border-crt-border bg-crt-black hover:bg-crt-panel text-crt-muted text-[11px] font-bold uppercase tracking-wider">
+          [ CANCEL ]
+        </button>
+        <button onclick="executeRestart()" class="flex-1 py-1.5 bg-crt-red text-black hover:bg-white text-[11px] font-black uppercase tracking-wider">
+          [ EXECUTE_RESTART ]
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEALTH UNLOCK ADVISORY MODAL -->
+  <div id="infoModal" class="fixed inset-0 bg-black/90 backdrop-blur-none z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-crt-surface border-2 border-cyan-500 max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="h-1 bg-cyan-400"></div>
+      <div class="space-y-2">
+        <div class="flex items-center space-x-2 text-cyan-400 font-bold text-xs uppercase tracking-widest">
+          <span>⚡ [ STEALTH AUTO-DECRYPT ADVISORY ]</span>
+        </div>
+        <div class="text-[12px] text-gray-200 leading-relaxed space-y-2">
+          <p id="infoModalText" class="text-amber-300 font-mono text-[11px]"></p>
+          <div class="p-3 bg-black border border-crt-border space-y-1.5 text-[11px]">
+            <div class="text-white font-bold">💡 CARA MEMBUKA 100% RAHASIA DARI HP:</div>
+            <div class="text-gray-300">• <b class="text-crt-green">Balas Chat Santai</b>: Buka chat di WA & balas kata apa saja (contoh: <span class="text-white font-mono font-bold">wkwk</span>, <span class="text-white font-mono font-bold">keren</span>, atau emoji). Chat Anda tidak akan dihapus, 0% kecurigaan, anti-delete tidak mendeteksi apapun!</div>
+            <div class="text-gray-300">• <b class="text-cyan-300">Trigger Titik / Spasi</b>: Balas foto dengan titik <span class="text-white font-mono font-bold">.</span> (otomatis terhapus dalam 1 detik).</div>
+            <div class="text-gray-400 text-[10px] pt-1 italic">Hasil foto/video akan otomatis mendarat di Chat Pribadi nomor Anda!</div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end pt-1">
+        <button onclick="closeInfoModal()" class="px-5 py-1.5 bg-cyan-500 text-black hover:bg-white text-[11px] font-black uppercase tracking-wider">
+          [ MENGERTI // CLOSE ]
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENT CONTROLLER LOGIC -->
+  <script>
+    let logCounter = 0;
+    const terminalStream = document.getElementById('terminalStream');
+    const autoScrollCheck = document.getElementById('autoScrollCheck');
+    const logCountEl = document.getElementById('logCount');
+
+    function openInfoModal(msg) {
+      document.getElementById('infoModalText').textContent = msg;
+      document.getElementById('infoModal').classList.remove('hidden');
+    }
+    function closeInfoModal() {
+      document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const borderColor = type === 'success' ? 'border-crt-green text-crt-green' : 'border-crt-red text-crt-red';
+      toast.className = `px-3 py-1.5 border bg-crt-black ${borderColor} text-[11px] font-mono tracking-wider shadow-2xl transition-all duration-150 transform translate-y-2 opacity-0 pointer-events-auto flex items-center space-x-2`;
+      toast.innerHTML = `<span class="font-bold">[ ${type === 'success' ? 'OK' : 'ERR'} ]</span><span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 20);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 200);
+      }, 2800);
+    }
+
+    function appendLogRow(log) {
+      logCounter++;
+      logCountEl.textContent = `${logCounter} EVENTS_REGISTERED`;
+
+      let colorClass = 'text-crt-muted';
+      let badgeStyle = 'border-crt-border text-crt-muted';
+
+      if (log.level === 'SUCCESS') {
+        colorClass = 'text-crt-green font-medium';
+        badgeStyle = 'border-crt-green text-crt-green bg-crt-greenDim';
+      } else if (log.level === 'WARN') {
+        colorClass = 'text-amber-400';
+        badgeStyle = 'border-amber-400 text-amber-400';
+      } else if (log.level === 'ERROR') {
+        colorClass = 'text-crt-red font-bold';
+        badgeStyle = 'border-crt-red text-crt-red bg-crt-redDim';
+      } else if (log.level === 'MEDIA') {
+        colorClass = 'text-cyan-400 font-medium';
+        badgeStyle = 'border-cyan-400 text-cyan-400';
+      } else if (log.level === 'INFO') {
+        colorClass = 'text-crt-text';
+        badgeStyle = 'border-crt-border text-crt-text';
+      }
+
+      const row = document.createElement('div');
+      row.className = 'leading-relaxed hover:bg-crt-panel px-1 py-0.5 border-b border-crt-border/30 flex items-start space-x-2';
+      row.innerHTML = `
+        <span class="text-crt-muted select-none text-[10px]">[${log.timestamp || '--:--:--'}]</span>
+        <span class="px-1 py-0.2 text-[9px] font-bold tracking-widest border ${badgeStyle} select-none uppercase font-mono">${log.level}</span>
+        <span class="flex-1 break-words ${colorClass}">${escapeHtml(log.message)} ${log.detail ? `<span class="text-crt-muted">(${escapeHtml(log.detail)})</span>` : ''}</span>
+      `;
+
+      terminalStream.appendChild(row);
+
+      if (autoScrollCheck.checked) {
+        terminalStream.scrollTop = terminalStream.scrollHeight;
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    function clearConsole() {
+      fetch('/api/logs/clear', { method: 'POST' }).catch(() => {});
+      terminalStream.innerHTML = '<div class="text-crt-muted italic">[ BUFFER_PURGED ] Waiting for telemetry...</div>';
+      logCounter = 0;
+      logCountEl.textContent = '0 EVENTS_REGISTERED';
+    }
+
+    function connectSse() {
+      const evtSource = new EventSource('/api/logs/stream');
+
+      evtSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'init') {
+            terminalStream.innerHTML = '';
+            data.logs.forEach(appendLogRow);
+          } else if (data.type === 'log') {
+            appendLogRow(data.log);
+          }
+        } catch (_) {}
+      };
+
+      evtSource.onerror = () => {
+        evtSource.close();
+        setTimeout(connectSse, 5000);
+      };
+    }
+
+    async function syncStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        const indicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const pill = document.getElementById('connectionPill');
+
+        if (data.status === 'connected') {
+          indicator.className = 'w-2 h-2 bg-crt-green inline-block';
+          statusText.className = 'text-crt-green font-bold tracking-widest';
+          statusText.textContent = 'ONLINE';
+          pill.className = 'flex items-center space-x-2 px-2.5 py-1 border border-crt-green bg-crt-greenDim text-[11px] font-mono';
+        } else if (data.status === 'connecting') {
+          indicator.className = 'w-2 h-2 bg-amber-400 inline-block animate-pulse';
+          statusText.className = 'text-amber-400 font-bold tracking-widest';
+          statusText.textContent = 'CONNECTING';
+          pill.className = 'flex items-center space-x-2 px-2.5 py-1 border border-amber-400 bg-amber-950/30 text-[11px] font-mono';
+        } else {
+          indicator.className = 'w-2 h-2 bg-crt-red inline-block';
+          statusText.className = 'text-crt-red font-bold tracking-widest';
+          statusText.textContent = 'OFFLINE';
+          pill.className = 'flex items-center space-x-2 px-2.5 py-1 border border-crt-red bg-crt-redDim text-[11px] font-mono';
+        }
+
+        document.getElementById('userNumber').textContent = data.userNumber ? `+${data.userNumber}` : '--';
+        document.getElementById('userLid').textContent = data.userLid || '--';
+        document.getElementById('uptime').textContent = data.uptime || '0d';
+        document.getElementById('connectedAt').textContent = data.connectedAt || '--';
+        document.getElementById('rvoCount').textContent = data.totalRvoProcessed || 0;
+
+        const stealthBadge = document.getElementById('stealthBadge');
+        const stealthDesc = document.getElementById('stealthDesc');
+        if (data.config.autoRevealInCurrentChat) {
+          stealthBadge.className = 'inline-block px-1.5 py-0.5 text-[10px] font-bold border border-amber-400 text-amber-400 bg-amber-950/20 uppercase';
+          stealthBadge.textContent = '[ STEALTH: DISABLED ]';
+          stealthDesc.textContent = 'TARGET: ROOMCHAT_PUBLIC';
+        } else {
+          stealthBadge.className = 'inline-block px-1.5 py-0.5 text-[10px] font-bold border border-crt-green text-crt-green bg-crt-greenDim uppercase';
+          stealthBadge.textContent = '[ STEALTH: ENABLED ]';
+          stealthDesc.textContent = 'TARGET: CHAT_SELF_EXCLUSIVE';
+        }
+
+        // Update TryCloudflare Tunnel Status & Link
+        const tunnelPill = document.getElementById('tunnelPill');
+        const tunnelLink = document.getElementById('tunnelLink');
+        if (data.tunnelUrl) {
+          tunnelPill.classList.remove('hidden');
+          tunnelPill.classList.add('flex');
+          tunnelLink.href = data.tunnelUrl;
+          tunnelLink.textContent = data.tunnelUrl.replace(/^https?:\/\//, '');
+        } else if (data.config && data.config.autoTunnel) {
+          tunnelPill.classList.remove('hidden');
+          tunnelPill.classList.add('flex');
+          tunnelLink.removeAttribute('href');
+          tunnelLink.textContent = 'ESTABLISHING_TUNNEL...';
+        } else {
+          tunnelPill.classList.add('hidden');
+          tunnelPill.classList.remove('flex');
+        }
+
+        document.getElementById('toggle_autoRvo').checked = Boolean(data.config.autoRvo);
+        document.getElementById('toggle_sendToSelf').checked = Boolean(data.config.sendToSelf);
+        document.getElementById('toggle_autoRevealInCurrentChat').checked = Boolean(data.config.autoRevealInCurrentChat);
+        document.getElementById('toggle_deleteTriggerMessage').checked = Boolean(data.config.deleteTriggerMessage);
+        document.getElementById('toggle_saveToLocalFolder').checked = Boolean(data.config.saveToLocalFolder);
+        if (document.getElementById('toggle_autoTunnel')) {
+          document.getElementById('toggle_autoTunnel').checked = Boolean(data.config.autoTunnel);
+        }
+        if (document.getElementById('toggle_sendTunnelUrlToChat')) {
+          document.getElementById('toggle_sendTunnelUrlToChat').checked = Boolean(data.config.sendTunnelUrlToChat);
+        }
+        if (document.getElementById('toggle_enableReactionTrigger')) {
+          document.getElementById('toggle_enableReactionTrigger').checked = Boolean(data.config.enableReactionTrigger);
+        }
+        if (document.getElementById('toggle_autoRemoveReaction')) {
+          document.getElementById('toggle_autoRemoveReaction').checked = Boolean(data.config.autoRemoveReaction);
+        }
+        
+        const numberInput = document.getElementById('input_forwardNumber');
+        if (document.activeElement !== numberInput) {
+          numberInput.value = data.config.forwardToOtherNumber || '';
+        }
+
+      } catch (_) {}
+    }
+
+    async function syncVoList() {
+      try {
+        const res = await fetch('/api/rvo/list');
+        const list = await res.json();
+
+        const container = document.getElementById('voListContainer');
+        const countEl = document.getElementById('voPayloadCount');
+        countEl.textContent = `${list.length} TARGETS`;
+
+        if (!list || list.length === 0) {
+          container.innerHTML = `
+            <div class="p-3 bg-crt-black border border-crt-border/50 text-crt-muted text-[11px] italic flex items-center justify-between">
+              <span>[ STANDBY ] Belum ada pesan View-Once yang terdeteksi. Menunggu packet stream...</span>
+              <span class="w-2 h-2 bg-crt-green inline-block animate-pulse"></span>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = list.map((item) => {
+          const isDec = item.isDecrypted;
+          const statusBadge = isDec
+            ? `<span class="px-1.5 py-0.5 text-[9px] font-bold border border-crt-green text-crt-green bg-crt-greenDim">[ 🟢 DECRYPTED ]</span>`
+            : `<span class="px-1.5 py-0.5 text-[9px] font-bold border border-crt-red text-crt-red bg-crt-redDim animate-pulse">[ 🔴 PENDING_UNLOCK ]</span>`;
+
+          const btnAction = isDec
+            ? `
+              <div class="flex items-center space-x-1.5 flex-wrap gap-1">
+                ${item.hasLocalFile ? `<a href="/api/rvo/media/${item.id}" target="_blank" class="px-2.5 py-1 border border-cyan-400 text-cyan-400 hover:bg-cyan-400 hover:text-black text-[10px] font-bold uppercase transition select-none inline-block">[ 👁️ VIEW MEDIA ]</a>` : ''}
+                <button onclick="unlockVo('${item.id}', this)" class="px-2.5 py-1 border border-crt-green text-crt-green hover:bg-crt-green hover:text-black text-[10px] font-bold uppercase transition select-none">[ 🔁 RE-SEND TO WA ]</button>
+              </div>
+            `
+            : `<button onclick="unlockVo('${item.id}', this)" class="px-3 py-1 bg-crt-red hover:bg-white text-black text-[10px] font-black uppercase transition select-none shadow-lg">[ 🔓 UNLOCK MEDIA ]</button>`;
+
+          return `
+            <div class="p-2.5 bg-crt-panel border border-crt-border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div class="space-y-0.5 min-w-0">
+                <div class="flex items-center space-x-2 flex-wrap">
+                  ${statusBadge}
+                  <span class="font-bold text-white text-[11px] truncate">+${item.senderNumber}</span>
+                  <span class="text-[10px] text-crt-muted truncate">(${escapeHtml(item.chatOrigin || 'Chat')})</span>
+                </div>
+                <div class="text-[10px] text-crt-muted font-mono flex items-center space-x-2 flex-wrap pt-0.5">
+                  <span>⏰ ${item.formattedTime || '--'}</span>
+                  <span>•</span>
+                  <span class="uppercase text-cyan-400 font-bold">${item.mediaType}</span>
+                  ${item.caption ? `<span>•</span><span class="text-white truncate max-w-[220px]">"${escapeHtml(item.caption)}"</span>` : ''}
+                </div>
+              </div>
+              <div class="flex-shrink-0">
+                ${btnAction}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (_) {}
+    }
+
+    async function unlockVo(id, btnEl) {
+      const origText = btnEl ? btnEl.textContent : '';
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = '[ ⏳ DECRYPTING... ]';
+      }
+      showToast('ISSUING_DECRYPT_DISPATCH...');
+
+      try {
+        const res = await fetch('/api/rvo/unlock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const result = await res.json();
+        if (result.success) {
+          showToast(result.message || 'PAYLOAD_UNLOCKED_SUCCESSFULLY');
+          setTimeout(syncVoList, 1000);
+        } else if (result.needReply) {
+          openInfoModal(result.error || 'Server WhatsApp membatasi media key pada pesan ini.');
+          showToast('ENCRYPTED_STUB: REPLY_REQUIRED', 'error');
+        } else {
+          showToast(`ERR: ${result.error || 'DECRYPT_FAILED'}`, 'error');
+        }
+      } catch (err) {
+        showToast('ERR: COMM_FAULT', 'error');
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = origText || '[ 🔓 UNLOCK MEDIA ]';
+        }
+      }
+    }
+
+    function copyTunnelUrl(event) {
+      if (event) event.stopPropagation();
+      const linkEl = document.getElementById('tunnelLink');
+      const url = linkEl ? linkEl.href : '';
+      if (url && url !== '#' && !url.includes('ESTABLISHING')) {
+        navigator.clipboard.writeText(url).then(() => {
+          showToast('TUNNEL_URL_COPIED_TO_CLIPBOARD');
+        }).catch(() => {
+          showToast(`URL: ${url}`);
+        });
+      } else {
+        showToast('TUNNEL_NOT_READY_YET', 'error');
+      }
+    }
+
+    async function updateConfig(key, value) {
+      try {
+        const payload = {};
+        payload[key] = value;
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (result.success) {
+          showToast(`SET: ${key} -> ${value}`);
+          syncStatus();
+        } else {
+          showToast('ERR: WRITE_FAILED', 'error');
+        }
+      } catch (err) {
+        showToast('ERR: COMM_FAULT', 'error');
+      }
+    }
+
+    async function saveForwardNumber() {
+      const num = document.getElementById('input_forwardNumber').value.trim().replace(/[^0-9]/g, '');
+      await updateConfig('forwardToOtherNumber', num);
+    }
+
+    function confirmRestart() {
+      document.getElementById('restartModal').classList.remove('hidden');
+    }
+    function closeRestartModal() {
+      document.getElementById('restartModal').classList.add('hidden');
+    }
+    async function executeRestart() {
+      closeRestartModal();
+      showToast('ISSUING_SIGKILL_RECONNECT...');
+      try {
+        await fetch('/api/restart', { method: 'POST' });
+        setTimeout(syncStatus, 3000);
+      } catch (_) {}
+    }
+
+    connectSse();
+    syncStatus();
+    syncVoList();
+    setInterval(syncStatus, 3000);
+    setInterval(syncVoList, 3000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "name": "selfbot-rvo",
+  "version": "1.0.0",
+  "description": "Ultra-lightweight WhatsApp Self-Bot for Auto Saving View-Once Media",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node --no-warnings index.js",
+    "build": "node scripts/build.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "selfbot",
+    "viewonce",
+    "rvo",
+    "baileys"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "baileys": "^7.0.0-rc14",
+    "chalk": "^5.3.0",
+    "express": "^5.2.1",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "qrcode-terminal": "^0.12.0",
+    "untun": "^0.2.2"
+  },
+  "allowScripts": {
+    "baileys@7.0.0-rc14": true,
+    "protobufjs@7.6.6": true
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^5.6.0"
+  }
+}
