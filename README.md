@@ -224,8 +224,7 @@ Penggunaan perangkat lunak ini memerlukan otorisasi berupa Kunci Lisensi resmi y
 
 Untuk permohonan lisensi, aktivasi, atau perpanjangan durasi langganan, hubungi pengembang melalui kontak berikut:
 
-- **WhatsApp Administrasi:** [wa.me/6289501524223](https://wa.me/6289501524223)
-- **Telegram Administrasi:** [@yukineko](https://t.me/yukineko)
+- **IG:** [https://www.instagram.com/ahmaddd9_/](https://www.instagram.com/ahmaddd9_/)
 
 Tersedia opsi lisensi dengan durasi 30 hari, 90 hari, dan lisensi permanen (Lifetime).
 
